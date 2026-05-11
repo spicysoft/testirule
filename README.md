@@ -306,6 +306,77 @@ Out of scope in this release:
 
 `#9` is expected to handle AS3/iRule reference consistency checks later.
 
+### AS3/iRule reference validation
+
+TestiRule can validate whether references inside iRule files match the AS3-derived test context.
+This catches missing pools, unresolved Data Groups, broken attached iRule definitions, and missing
+iRule files before deployment.
+
+Validate every Tcl file in a directory:
+
+```bash
+python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irules-dir examples/irules
+```
+
+Validate a single iRule file:
+
+```bash
+python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irule examples/irules/route_by_uri.tcl
+```
+
+Run it through Docker:
+
+```bash
+docker compose run --rm test python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irules-dir examples/irules
+```
+
+Optional flags:
+
+- `--strict`: treat warnings as a failure
+- `--json`: emit machine-readable validation results
+
+Current checks:
+
+- `pool <name>`
+- `virtual <name>`
+- `class match ... <datagroup>`
+- `class lookup ... <datagroup>`
+- `class exists <datagroup>`
+- service `attachedIRules`
+- AS3 iRule definitions versus repository files
+
+Current path resolution rules:
+
+- `/Tenant/App/Object`: validated as an exact AS3 context path
+- `/Common/...` pool: must exist as the same full path in context
+- `/Common/...` virtual: warning only, because AS3 context alone cannot prove the external target
+- relative names such as `api_pool`: resolved against the owning AS3 application when the iRule file name maps to a known AS3 iRule
+- dynamic references such as `pool $target_pool`: warning only, or failure with `--strict`
+
+Example success output:
+
+```text
+OK: AS3/iRule references are valid.
+Checked:
+- pools: 2
+- virtuals: 0
+- data groups: 1
+- iRules: 1
+```
+
+Out of scope in this release:
+
+- full Tcl parsing
+- full static analysis of dynamically generated names
+- AS3 schema validation
+- deploy to BIG-IP
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 
