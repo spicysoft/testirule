@@ -97,7 +97,7 @@ namespace eval ::testcl {
   # namespace export translate
   # namespace export urlcatquery
   # namespace export use
-  # namespace export virtual
+  namespace export virtual
   # namespace export vlan_id
   # namespace export when
   # namespace export whereis
@@ -172,5 +172,13 @@ proc ::testcl::pool { name } {
    }
    
    return -code 1000 "pool $name"
+
+}
+
+proc ::testcl::virtual { name } {
+
+   log::log debug "Target virtual server name => $name"
+
+   return -code 1000 "virtual $name"
 
 }

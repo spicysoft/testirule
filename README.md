@@ -176,6 +176,53 @@ Out of scope in this release:
 - `IP::addr ... mask ...`
 - full BIG-IP `IP::addr` compatibility
 
+### Mock virtual
+
+TestiRule can verify `virtual` as an endstate in the same style as `pool`:
+
+```tcl
+endstate virtual /Common/legacy_vs
+```
+
+Supported forms:
+
+```tcl
+virtual /Common/legacy_vs
+virtual legacy_vs
+```
+
+Current behavior:
+
+- `virtual <name>` records `virtual <name>` as the final action
+- TestiRule keeps the existing terminal-command behavior already used by `pool`
+- the first transfer command that hits the expected endstate stops evaluation for that event
+
+Examples:
+
+```tcl
+pool /Common/api_pool
+virtual /Common/legacy_vs
+```
+
+Final action:
+
+```text
+pool /Common/api_pool
+```
+
+```tcl
+virtual /Common/legacy_vs
+pool /Common/api_pool
+```
+
+Final action:
+
+```text
+virtual /Common/legacy_vs
+```
+
+This release does not attempt to re-run another virtual server's iRule chain.
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 
