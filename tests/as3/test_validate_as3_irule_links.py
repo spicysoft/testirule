@@ -26,16 +26,17 @@ class ValidateAs3IruleLinksCliTest(unittest.TestCase):
         result = run_cli("--context", "examples/as3/app-web.context.json", "--irules-dir", "examples/irules")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("OK: AS3/iRule references are valid.", result.stdout)
+        self.assertIn("warnings:", result.stdout)
 
     def test_missing_pool_reference_fails(self):
-        result = run_cli("--context", "examples/as3/app-web.context.json", "--irule", "examples/irules/broken_route_by_uri.tcl")
+        result = run_cli("--context", "examples/as3/app-web.context.json", "--irule", "examples/broken-irules/broken_missing_pool.tcl")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("pool is not defined in AS3 context", result.stdout)
 
     def test_relative_pool_reference_resolves_from_application_context(self):
         result = run_cli("--context", "examples/as3/app-web.context.json", "--irule", "examples/irules/route_by_uri.tcl")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("pools: 2", result.stdout)
+        self.assertIn("pools: 1", result.stdout)
 
     def test_common_pool_reference_must_exist_in_context(self):
         context = json.loads(SAMPLE_CONTEXT.read_text(encoding="utf-8"))
@@ -51,25 +52,14 @@ class ValidateAs3IruleLinksCliTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_data_group_reference_is_validated(self):
-        result = run_cli("--context", "examples/as3/app-web.context.json", "--irule", "examples/irules/route_by_uri.tcl")
+        result = run_cli("--context", "examples/as3/app-web.context.json", "--irule", "examples/irules/host_datagroup_routing.tcl")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("data groups: 1", result.stdout)
 
     def test_class_lookup_reference_is_validated(self):
-        context = json.loads(SAMPLE_CONTEXT.read_text(encoding="utf-8"))
-        app = context["tenants"]["Tenant_Web"]["applications"]["App_Web"]
-        app["dataGroups"]["uri_to_pool_map"] = {
-            "path": "/Tenant_Web/App_Web/uri_to_pool_map",
-            "class": "Data_Group_String",
-        }
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            context_path = Path(tmpdir) / "context.json"
-            irule_path = Path(tmpdir) / "route_by_uri.tcl"
-            context_path.write_text(json.dumps(context), encoding="utf-8")
-            irule_path.write_text("when HTTP_REQUEST {\n  class lookup [HTTP::uri] uri_to_pool_map\n}\n", encoding="utf-8")
-            result = run_cli("--context", str(context_path), "--irule", str(irule_path))
+        result = run_cli("--context", "examples/as3/app-web.context.json", "--irule", "examples/irules/uri_to_pool_map.tcl")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("data groups: 1", result.stdout)
 
     def test_virtual_reference_to_application_service_is_valid(self):
         context = json.loads(SAMPLE_CONTEXT.read_text(encoding="utf-8"))
@@ -100,7 +90,7 @@ class ValidateAs3IruleLinksCliTest(unittest.TestCase):
 
     def test_attached_irule_missing_from_application_is_error(self):
         context = json.loads(SAMPLE_CONTEXT.read_text(encoding="utf-8"))
-        context["tenants"]["Tenant_Web"]["applications"]["App_Web"]["services"]["service"]["attachedIRules"] = [
+        context["tenants"]["Tenant_Web"]["applications"]["App_Web"]["services"]["service_web"]["attachedIRules"] = [
             "/Tenant_Web/App_Web/missing_rule"
         ]
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -133,7 +123,7 @@ class ValidateAs3IruleLinksCliTest(unittest.TestCase):
             "--context",
             "examples/as3/app-web.context.json",
             "--irule",
-            "examples/irules/broken_route_by_uri.tcl",
+            "examples/broken-irules/broken_missing_pool.tcl",
             "--json",
         )
         self.assertNotEqual(result.returncode, 0)
@@ -141,3 +131,7 @@ class ValidateAs3IruleLinksCliTest(unittest.TestCase):
         self.assertFalse(payload["ok"])
         self.assertGreaterEqual(len(payload["errors"]), 1)
 
+    def test_missing_data_group_reference_fails(self):
+        result = run_cli("--context", "examples/as3/app-web.context.json", "--irule", "examples/broken-irules/broken_missing_datagroup.tcl")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("data group is not defined in AS3 context", result.stdout)

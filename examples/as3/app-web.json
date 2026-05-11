@@ -7,7 +7,7 @@
     "App_Web": {
       "class": "Application",
       "template": "generic",
-      "service": {
+      "service_web": {
         "class": "Service_HTTP",
         "virtualAddresses": [
           "192.0.2.10"
@@ -15,8 +15,24 @@
         "virtualPort": 80,
         "pool": "web_pool",
         "iRules": [
-          "route_by_uri"
+          "route_by_uri",
+          "host_datagroup_routing",
+          "uri_to_pool_map",
+          "access_control_by_ip",
+          "internal_network_datagroup",
+          "virtual_routing",
+          "maintenance_response"
         ]
+      },
+      "legacy_service": {
+        "class": "Service_HTTP",
+        "virtualAddresses": [
+          "192.0.2.20"
+        ],
+        "virtualPort": 80,
+        "pool": {
+          "use": "legacy_pool"
+        }
       },
       "web_pool": {
         "class": "Pool"
@@ -24,11 +40,59 @@
       "api_pool": {
         "class": "Pool"
       },
+      "allowed_pool": {
+        "class": "Pool"
+      },
+      "admin_pool": {
+        "class": "Pool"
+      },
+      "internal_pool": {
+        "class": "Pool"
+      },
+      "external_pool": {
+        "class": "Pool"
+      },
+      "legacy_pool": {
+        "class": "Pool"
+      },
       "route_by_uri": {
         "class": "iRule",
-        "iRule": "when HTTP_REQUEST { }"
+        "iRule": "when HTTP_REQUEST { if {[string first \"/api\" [HTTP::uri]] == 0} { pool api_pool } }"
+      },
+      "host_datagroup_routing": {
+        "class": "iRule",
+        "iRule": "when HTTP_REQUEST { if {[class match [HTTP::host] equals allowed_hosts]} { pool /Tenant_Web/App_Web/allowed_pool } }"
+      },
+      "uri_to_pool_map": {
+        "class": "iRule",
+        "iRule": "when HTTP_REQUEST { set target_pool [class lookup [HTTP::uri] uri_to_pool_map_dg]; if {$target_pool ne \"\"} { pool $target_pool } }"
+      },
+      "access_control_by_ip": {
+        "class": "iRule",
+        "iRule": "when HTTP_REQUEST { if {[IP::addr [IP::client_addr] equals 10.0.0.0/8]} { pool /Tenant_Web/App_Web/internal_pool } else { pool /Tenant_Web/App_Web/external_pool } }"
+      },
+      "internal_network_datagroup": {
+        "class": "iRule",
+        "iRule": "when HTTP_REQUEST { if {[class match [IP::client_addr] equals internal_networks]} { pool /Tenant_Web/App_Web/internal_pool } }"
+      },
+      "virtual_routing": {
+        "class": "iRule",
+        "iRule": "when HTTP_REQUEST { if {[string first \"/legacy\" [HTTP::uri]] == 0} { virtual /Tenant_Web/App_Web/legacy_service } }"
+      },
+      "maintenance_response": {
+        "class": "iRule",
+        "iRule": "when HTTP_REQUEST { if {[class match [HTTP::host] equals maintenance_hosts]} { HTTP::respond 503 } }"
       },
       "allowed_hosts": {
+        "class": "Data_Group_String"
+      },
+      "maintenance_hosts": {
+        "class": "Data_Group_String"
+      },
+      "internal_networks": {
+        "class": "Data_Group_Address"
+      },
+      "uri_to_pool_map_dg": {
         "class": "Data_Group_String"
       }
     }

@@ -14,7 +14,7 @@ REFERENCE_RE = re.compile(r"(?m)^\s*(pool|virtual)\s+([^\s\]\};]+)")
 CLASS_MATCH_RE = re.compile(
     r"(?m)class\s+match\b.*?\b(?:equals|eq|starts-with|starts_with|ends-with|contains)\s+([^\s\]\};]+)"
 )
-CLASS_LOOKUP_RE = re.compile(r"(?m)class\s+lookup\b.*?\s+([^\s\]\};]+)")
+CLASS_LOOKUP_RE = re.compile(r"(?m)class\s+lookup\s+[^\s]+\s+([^\s\]\};]+)")
 CLASS_EXISTS_RE = re.compile(r"(?m)class\s+exists\s+([^\s\]\};]+)")
 
 

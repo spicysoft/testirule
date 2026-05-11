@@ -5,7 +5,7 @@
       "applications": {
         "App_Web": {
           "services": {
-            "service": {
+            "service_web": {
               "class": "Service_HTTP",
               "virtualAddresses": [
                 "192.0.2.10"
@@ -13,20 +13,58 @@
               "virtualPort": 80,
               "defaultPool": "/Tenant_Web/App_Web/web_pool",
               "attachedIRules": [
-                "/Tenant_Web/App_Web/route_by_uri"
+                "/Tenant_Web/App_Web/route_by_uri",
+                "/Tenant_Web/App_Web/host_datagroup_routing",
+                "/Tenant_Web/App_Web/uri_to_pool_map",
+                "/Tenant_Web/App_Web/access_control_by_ip",
+                "/Tenant_Web/App_Web/internal_network_datagroup",
+                "/Tenant_Web/App_Web/virtual_routing",
+                "/Tenant_Web/App_Web/maintenance_response"
               ]
+            },
+            "legacy_service": {
+              "class": "Service_HTTP",
+              "virtualAddresses": [
+                "192.0.2.20"
+              ],
+              "virtualPort": 80,
+              "defaultPool": "/Tenant_Web/App_Web/legacy_pool",
+              "attachedIRules": []
             }
           },
           "pools": {
             "web_pool": "/Tenant_Web/App_Web/web_pool",
-            "api_pool": "/Tenant_Web/App_Web/api_pool"
+            "api_pool": "/Tenant_Web/App_Web/api_pool",
+            "allowed_pool": "/Tenant_Web/App_Web/allowed_pool",
+            "admin_pool": "/Tenant_Web/App_Web/admin_pool",
+            "internal_pool": "/Tenant_Web/App_Web/internal_pool",
+            "external_pool": "/Tenant_Web/App_Web/external_pool",
+            "legacy_pool": "/Tenant_Web/App_Web/legacy_pool"
           },
           "iRules": {
-            "route_by_uri": "/Tenant_Web/App_Web/route_by_uri"
+            "route_by_uri": "/Tenant_Web/App_Web/route_by_uri",
+            "host_datagroup_routing": "/Tenant_Web/App_Web/host_datagroup_routing",
+            "uri_to_pool_map": "/Tenant_Web/App_Web/uri_to_pool_map",
+            "access_control_by_ip": "/Tenant_Web/App_Web/access_control_by_ip",
+            "internal_network_datagroup": "/Tenant_Web/App_Web/internal_network_datagroup",
+            "virtual_routing": "/Tenant_Web/App_Web/virtual_routing",
+            "maintenance_response": "/Tenant_Web/App_Web/maintenance_response"
           },
           "dataGroups": {
             "allowed_hosts": {
               "path": "/Tenant_Web/App_Web/allowed_hosts",
+              "class": "Data_Group_String"
+            },
+            "maintenance_hosts": {
+              "path": "/Tenant_Web/App_Web/maintenance_hosts",
+              "class": "Data_Group_String"
+            },
+            "internal_networks": {
+              "path": "/Tenant_Web/App_Web/internal_networks",
+              "class": "Data_Group_Address"
+            },
+            "uri_to_pool_map_dg": {
+              "path": "/Tenant_Web/App_Web/uri_to_pool_map_dg",
               "class": "Data_Group_String"
             }
           }

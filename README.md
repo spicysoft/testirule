@@ -377,6 +377,73 @@ Out of scope in this release:
 - AS3 schema validation
 - deploy to BIG-IP
 
+### Sample iRule test suite
+
+TestiRule now includes a practical sample suite under `examples/` so new users can see how
+to combine iRule code, Tcl tests, AS3 context extraction, and AS3/iRule reference validation.
+
+Sample layout:
+
+- `examples/irules/`: success-path sample iRules used by validation and tests
+- `examples/broken-irules/`: failure samples for manual validation checks
+- `examples/as3/app-web.json`: AS3 declaration covering the sample application
+- `examples/as3/app-web.context.json`: extracted context for the same declaration
+- `test/test_sample_suite_it.tcl`: Tcl integration tests that exercise the samples
+
+Included samples:
+
+- `route_by_uri.tcl`: URI-based pool selection with default pool fallback
+- `host_datagroup_routing.tcl`: host-based routing with a string Data Group
+- `uri_to_pool_map.tcl`: Data Group lookup returning a pool path
+- `access_control_by_ip.tcl`: `IP::addr` CIDR-based internal/external routing
+- `internal_network_datagroup.tcl`: address Data Group matching
+- `virtual_routing.tcl`: `virtual` forwarding to another service
+- `maintenance_response.tcl`: `HTTP::respond` taking priority over default routing
+
+Run the normal sample suite through the standard test entrypoint:
+
+```bash
+docker compose run --rm test
+```
+
+Regenerate AS3 context for the samples:
+
+```bash
+docker compose run --rm test python3 tools/extract-as3-context.py \
+  examples/as3/app-web.json \
+  --output examples/as3/app-web.context.json
+```
+
+Validate references for the success samples:
+
+```bash
+docker compose run --rm test python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irules-dir examples/irules
+```
+
+The validation suite includes `uri_to_pool_map.tcl`, which uses a dynamic `pool $target_pool`
+reference after `class lookup`. That is expected to produce a warning in normal mode and a
+non-zero exit only with `--strict`.
+
+Failure samples are intentionally excluded from the normal test run and GitHub Actions. Run them
+manually when you want to confirm non-zero exits:
+
+```bash
+docker compose run --rm test python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irule examples/broken-irules/broken_missing_pool.tcl
+```
+
+```bash
+docker compose run --rm test python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irule examples/broken-irules/broken_missing_datagroup.tcl
+```
+
+This sample suite is meant to demonstrate maintainable iRule test patterns, not to fully emulate
+BIG-IP runtime behavior.
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 
