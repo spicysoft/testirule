@@ -41,6 +41,40 @@ docker build -t testirule .
 docker run --rm testirule
 ```
 
+You can also target a specific test file through the container entrypoint:
+
+```bash
+docker compose run --rm test examples/test_minimal_failure.tcl
+```
+
+Check the process exit code after running tests:
+
+Successful run:
+
+```bash
+docker compose run --rm test
+echo $?
+```
+
+Expected exit code:
+
+```text
+0
+```
+
+Failing run:
+
+```bash
+docker compose run --rm test examples/test_minimal_failure.tcl
+echo $?
+```
+
+Expected exit code:
+
+```text
+1
+```
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 

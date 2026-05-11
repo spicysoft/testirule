@@ -10,11 +10,25 @@ function run_test() {
     fi
 }
 
+if [ $# -lt 1 ] ; then
+    echo "Usage: ./tests.sh [jtcl|tclsh] [test_file ...]"
+    exit 1
+fi
+
+interpreter="$1"
+shift
+
 failures=()
 
-for file in test/test_*.tcl
+if [ $# -gt 0 ] ; then
+    test_files=("$@")
+else
+    test_files=(test/test_*.tcl)
+fi
+
+for file in "${test_files[@]}"
 do
-    run_test "$1" "$file"
+    run_test "$interpreter" "$file"
     if [ $? -gt 0 ] ; then
         failures+=($file)
     fi
