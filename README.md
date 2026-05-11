@@ -142,6 +142,40 @@ Match direction is defined as follows:
 For `address` Data Groups, this release only supports the minimum needed for `class match ... equals ...`
 with IPv4 addresses and CIDR records. Full `IP::addr` behavior remains out of scope.
 
+### Mock IP::addr
+
+TestiRule supports the minimum IPv4 subset needed for common iRule tests:
+
+```tcl
+IP::addr 10.1.2.3 equals 10.0.0.0/8
+IP::addr 10.1.2.3 equals 10.1.2.3
+IP::addr [IP::client_addr] equals 10.0.0.0/8
+IP::addr 10.1.2.3 == 10.0.0.0/8
+```
+
+Set the client IP in tests with:
+
+```tcl
+set_client_addr "10.1.2.3"
+```
+
+`IP::client_addr` and `IP::remote_addr` will both return that value unless an `on ... return ...`
+expectation is defined for the same command.
+
+Current scope:
+
+- IPv4 single-address equality
+- IPv4 CIDR inclusion checks
+- invalid IP and invalid CIDR raise Tcl errors
+
+Out of scope in this release:
+
+- IPv6
+- route domain suffixed addresses such as `10.0.0.1%1`
+- netmask syntax such as `10.0.0.0/255.0.0.0`
+- `IP::addr ... mask ...`
+- full BIG-IP `IP::addr` compatibility
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 

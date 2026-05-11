@@ -3,6 +3,10 @@ package require log
 package require cmdline
 package require ip
 
+if {![llength [info commands ::testcl::ipv4_equals]]} {
+  source [file join [file dirname [info script]] ip.tcl]
+}
+
 namespace eval ::testcl {
   namespace export class
   namespace export datagroup_create
@@ -129,26 +133,8 @@ proc ::testcl::class_address_matches {value operator record} {
   if {[::testcl::class_normalize_operator $operator] ne "eq"} {
     return 0
   }
-  set value_mask [::ip::mask $value]
-  set record_mask [::ip::mask $record]
-
-  if {$value_mask ne ""} {
-    set masked_value $value
-  } elseif {$record_mask ne ""} {
-    set masked_value "$value/$record_mask"
-  } else {
-    set masked_value $value
-  }
-
-  if {$record_mask ne ""} {
-    set masked_record $record
-  } elseif {$value_mask ne ""} {
-    set masked_record "$record/$value_mask"
-  } else {
-    set masked_record $record
-  }
-
-  if {[catch {::ip::equal $masked_value $masked_record} result]} {
+  set rc [catch {::testcl::ipv4_equals $value $record} result]
+  if {$rc != 0} {
     log::log debug "Unable to compare IP '$value' against '$record': $result"
     return 0
   }
