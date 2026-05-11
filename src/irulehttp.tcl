@@ -1043,6 +1043,8 @@ proc ::testcl::HTTP::redirect {args} {
   }
   log::log debug "mark response as sent to client"
   set sent 1
+  variable ::testcl::currentFinalAction
+  set ::testcl::currentFinalAction [list HTTP::redirect [lindex $args 0]]
   
   set cmdargs [concat HTTP::redirect $args]
   #set rc [catch { return [testcl::expected {*}$cmdargs] } res]
@@ -1157,6 +1159,12 @@ proc ::testcl::HTTP::respond {args} {
   }
   log::log debug "mark response as sent to client"
   set sent 1
+  variable ::testcl::currentFinalAction
+  if {[llength $args] > 0} {
+    set ::testcl::currentFinalAction [list HTTP::respond [lindex $args 0]]
+  } else {
+    set ::testcl::currentFinalAction [list HTTP::respond]
+  }
   
   set cmdargs [concat HTTP::respond $args]
   #set rc [catch { return [testcl::expected {*}$cmdargs] } res]

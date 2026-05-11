@@ -223,6 +223,35 @@ virtual /Common/legacy_vs
 
 This release does not attempt to re-run another virtual server's iRule chain.
 
+### Default pool and effective route
+
+TestiRule can model a virtual server default pool in test context:
+
+```tcl
+set_default_pool "/Common/web_pool"
+```
+
+After running an iRule, you can inspect the effective routing result:
+
+```tcl
+verify "effective pool" "/Common/web_pool" eq { effective_pool }
+verify "effective action" {pool /Common/web_pool} eq { effective_action }
+```
+
+Behavior in this release:
+
+- if no explicit final action is taken, `effective_pool` falls back to the configured default pool
+- if `pool` is called, `effective_pool` becomes that explicit pool
+- if `virtual`, `HTTP::redirect`, `HTTP::respond`, `reject`, or `drop` is called, `effective_action` reports that action
+- `effective_pool` is empty for non-pool final actions
+
+Current priority model:
+
+- TestiRule keeps the existing terminal-command behavior used by current endstate handling
+- the first transfer or terminal action that exits the event becomes the final action
+- if no explicit action occurs and a default pool is configured, the effective action is `pool <default-pool>`
+- if no explicit action occurs and no default pool is configured, effective route is unset
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 

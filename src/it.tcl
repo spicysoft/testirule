@@ -79,6 +79,21 @@ proc ::testcl::reset_expectations { } {
     log::log debug "Reset current pool"
     unset currentPool
   }
+  variable defaultPool
+  if { [info exists defaultPool] } {
+    log::log debug "Reset default pool"
+    unset defaultPool
+  }
+  variable currentFinalAction
+  if { [info exists currentFinalAction] } {
+    log::log debug "Reset current final action"
+    unset currentFinalAction
+  }
+  variable currentVirtual
+  if { [info exists currentVirtual] } {
+    log::log debug "Reset current virtual"
+    unset currentVirtual
+  }
   variable availablePools
   if { [info exists availablePools] } {
     log::log debug "Reset available pools"

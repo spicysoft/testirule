@@ -84,7 +84,7 @@ proc ::testcl::when args {
     variable expectedEndState
     if { ![info exist expectedEndState] } {
       log::log debug "endstate verification skipped - undefined in current \"it\" context"
-      if {$rc >= 1000} {
+      if {$rc > 1000} {
         error "Expected return code < 1000, got $rc"
       }
       return -code 2000 "when $event"

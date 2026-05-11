@@ -4,6 +4,9 @@ package require log
 namespace eval ::testcl {
     variable availablePools [list]
     variable currentPool
+    variable defaultPool
+    variable currentFinalAction
+    variable currentVirtual
   # namespace export accumulate
   # namespace export active_members
   # namespace export active_nodes
@@ -63,6 +66,10 @@ namespace eval ::testcl {
   # namespace export peer
   # namespace export persist
    namespace export pool
+  namespace export set_default_pool
+  namespace export clear_default_pool
+  namespace export effective_pool
+  namespace export effective_action
   # namespace export priority
   # namespace export rateclass
   # namespace export redirect
@@ -154,17 +161,19 @@ proc ::testcl::pool { name } {
 
    variable availablePools
    variable currentPool
+   variable currentFinalAction
 
    log::log debug "Available pools  => $availablePools"
    log::log debug "Target pool name  => $name"
+
+   set currentPool $name
+   set currentFinalAction [list pool $name]
 
    set rc [catch {lsearch -exact $availablePools $name} found]
 
    log::log debug "rc=$rc found=$found"
 
    if { $found >= 0} {
-
-       set currentPool $name
 
        log::log debug "Current pool is now => $currentPool"
        
@@ -176,9 +185,64 @@ proc ::testcl::pool { name } {
 }
 
 proc ::testcl::virtual { name } {
+   variable currentFinalAction
+   variable currentVirtual
 
    log::log debug "Target virtual server name => $name"
+   set currentVirtual $name
+   set currentFinalAction [list virtual $name]
 
    return -code 1000 "virtual $name"
 
+}
+
+proc ::testcl::drop {} {
+   variable currentFinalAction
+   set currentFinalAction [list drop]
+   return -code 1000 "drop"
+}
+
+proc ::testcl::reject {} {
+   variable currentFinalAction
+   set currentFinalAction [list reject]
+   return -code 1000 "reject"
+}
+
+proc ::testcl::set_default_pool {name} {
+   variable defaultPool
+   set defaultPool $name
+}
+
+proc ::testcl::clear_default_pool {} {
+   variable defaultPool
+   if {[info exists defaultPool]} {
+      unset defaultPool
+   }
+}
+
+proc ::testcl::effective_pool {} {
+   variable currentFinalAction
+   if {[info exists currentFinalAction]} {
+      if {[lindex $currentFinalAction 0] eq "pool"} {
+         return [lindex $currentFinalAction 1]
+      }
+      return ""
+   }
+   variable defaultPool
+   if {[info exists defaultPool]} {
+      return $defaultPool
+   }
+   return ""
+}
+
+proc ::testcl::effective_action {} {
+   variable currentFinalAction
+   if {[info exists currentFinalAction]} {
+      return $currentFinalAction
+   }
+   variable defaultPool
+   if {[info exists defaultPool]} {
+      return [list pool $defaultPool]
+   }
+   return ""
 }
