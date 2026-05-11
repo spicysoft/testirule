@@ -252,6 +252,60 @@ Current priority model:
 - if no explicit action occurs and a default pool is configured, the effective action is `pool <default-pool>`
 - if no explicit action occurs and no default pool is configured, effective route is unset
 
+### AS3 context extraction
+
+TestiRule can extract test context from an AS3 declaration so iRule tests can reuse the same
+default pool, attached iRules, pools, and Data Group names defined in AS3.
+
+Run the extractor directly:
+
+```bash
+python3 tools/extract-as3-context.py examples/as3/app-web.json
+```
+
+Write the result to a file:
+
+```bash
+python3 tools/extract-as3-context.py examples/as3/app-web.json --output test-context/app-web.context.json
+```
+
+Run it through Docker:
+
+```bash
+docker compose run --rm test python3 tools/extract-as3-context.py examples/as3/app-web.json
+```
+
+The extractor currently walks:
+
+- `Tenant`
+- `Application`
+- `Service_HTTP`
+- `Service_HTTPS`
+- `Service_TCP`
+- `Service_UDP`
+- `Service_L4`
+- `Pool`
+- `iRule`
+- `Data_Group`
+- `Data_Group_String`
+- `Data_Group_Integer`
+- `Data_Group_Address`
+
+Supported reference forms in `pool` and `iRules`:
+
+- plain string such as `"web_pool"`
+- AS3 `use` reference such as `{ "use": "web_pool" }`
+
+Out of scope in this release:
+
+- AS3/iRule reference validation
+- full AS3 schema validation
+- AS3 deploy
+- AS3 class coverage beyond the list above
+- iRule Tcl parsing
+
+`#9` is expected to handle AS3/iRule reference consistency checks later.
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 

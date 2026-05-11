@@ -1,0 +1,37 @@
+{
+  "source": "examples/as3/app-web.json",
+  "tenants": {
+    "Tenant_Web": {
+      "applications": {
+        "App_Web": {
+          "services": {
+            "service": {
+              "class": "Service_HTTP",
+              "virtualAddresses": [
+                "192.0.2.10"
+              ],
+              "virtualPort": 80,
+              "defaultPool": "/Tenant_Web/App_Web/web_pool",
+              "attachedIRules": [
+                "/Tenant_Web/App_Web/route_by_uri"
+              ]
+            }
+          },
+          "pools": {
+            "web_pool": "/Tenant_Web/App_Web/web_pool",
+            "api_pool": "/Tenant_Web/App_Web/api_pool"
+          },
+          "iRules": {
+            "route_by_uri": "/Tenant_Web/App_Web/route_by_uri"
+          },
+          "dataGroups": {
+            "allowed_hosts": {
+              "path": "/Tenant_Web/App_Web/allowed_hosts",
+              "class": "Data_Group_String"
+            }
+          }
+        }
+      }
+    }
+  }
+}
