@@ -1,10 +1,121 @@
-# Introduction
+# TestiRule
 
-**TesTcl** is a [Tcl](http://en.wikipedia.org/wiki/Tcl) library for unit testing
-[iRules](https://devcentral.f5.com/HotTopics/iRules/tabid/1082202/Default.aspx) which 
-are used when configuring [F5 BIG-IP](http://www.f5.com/products/big-ip/) devices.
+TestiRule は [landro/TesTcl](https://github.com/landro/TesTcl) を fork して rename したリポジトリです。
+目的は、F5 BIG-IP iRule のテストを実案件の保守作業で使いやすい形に整備することです。
 
-## News
+元の TesTcl は、iRule を Tcl でユニットテストするための土台を提供していました。
+このリポジトリではその土台を維持しつつ、Docker 実行、CI、BIG-IP 向けモック、AS3 context、
+参照整合性チェック、サンプルスイートを追加し、より直接的に iRule テストハーネスとして使えるようにしています。
+
+## Fork & Rename
+
+このリポジトリは TesTcl を fork し、目的が伝わるように TestiRule へ rename しました。
+単なる Tcl テスト補助ライブラリではなく、F5 BIG-IP iRule 保守のためのテストハーネスであることを
+名前から分かるようにするためです。
+
+rename は名称変更だけではなく、重視する対象の違いも表しています。
+
+- upstream TesTcl: 汎用的な iRule ユニットテストの基盤
+- this fork / TestiRule: チームで iRule テストを実行・検証・保守するための実務向けワークフロー
+
+つまり TestiRule は、TesTcl の書き方や考え方を可能な範囲で引き継ぎつつ、
+ローカル開発や CI で再現性よく iRule テストを回すための機能を追加した fork です。
+
+## このリポジトリで改善した点
+
+この fork では、TesTcl をそのまま使うだけでは不足していた実務向け機能を追加しています。
+
+- Docker 実行環境
+  - ローカル PC に Tcl を直接入れなくても `docker compose run --rm test` でテストを実行できます。
+- GitHub Actions 対応
+  - push / pull request で自動テストを流し、失敗時は CI を失敗させられます。
+- テスト失敗時の非ゼロ終了
+  - 標準出力だけでなく終了コードでも失敗を検知できるため、CI 連携が安定します。
+- Data Group / `class` モック
+  - `class match`、`class lookup`、`class exists` を使う iRule をテストできます。
+- `IP::addr` / CIDR 判定
+  - `IP::client_addr` を使った IPv4 単一 IP / CIDR 判定をテストできます。
+- `virtual` と default pool / effective route
+  - `virtual` 転送、default pool、最終的な routing 結果を検証できます。
+- AS3 context 抽出
+  - AS3 JSON から test context を抽出し、default pool や iRule 紐付けをテスト前提として扱えます。
+- AS3/iRule 参照整合性チェック
+  - iRule が参照する pool / virtual / Data Group と AS3 上の定義の不整合を事前に検出できます。
+- 実用サンプルテストスイート
+  - iRule・テスト・AS3・validation をまとめたサンプル一式から使い方を把握できます。
+
+## 改善された機能の使い方
+
+最初は Docker で通常テストを流すのが一番分かりやすい使い方です。
+
+```bash
+docker compose build
+docker compose run --rm test
+```
+
+サンプルテストスイートも通常テスト実行に含まれています。
+追加したサンプルは `examples/irules/` と `test/test_sample_suite_it.tcl` にまとまっています。
+
+Data Group、`IP::addr`、`virtual`、default pool を使うテストは、次のサンプルから読むと流れを把握しやすいです。
+
+- `examples/irules/host_datagroup_routing.tcl`
+- `examples/irules/uri_to_pool_map.tcl`
+- `examples/irules/access_control_by_ip.tcl`
+- `examples/irules/internal_network_datagroup.tcl`
+- `examples/irules/virtual_routing.tcl`
+- `examples/irules/maintenance_response.tcl`
+
+AS3 context を抽出する場合は次のコマンドを使います。
+
+```bash
+python3 tools/extract-as3-context.py \
+  examples/as3/app-web.json \
+  --output examples/as3/app-web.context.json
+```
+
+Docker 経由でも同じように実行できます。
+
+```bash
+docker compose run --rm test python3 tools/extract-as3-context.py \
+  examples/as3/app-web.json \
+  --output examples/as3/app-web.context.json
+```
+
+AS3/iRule の参照整合性を確認する場合は次のコマンドです。
+
+```bash
+python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irules-dir examples/irules
+```
+
+broken サンプルで非ゼロ終了を確認したい場合は、失敗確認用の iRule を個別に指定します。
+
+```bash
+python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irule examples/broken-irules/broken_missing_pool.tcl
+```
+
+```bash
+python3 tools/validate-as3-irule-links.py \
+  --context examples/as3/app-web.context.json \
+  --irule examples/broken-irules/broken_missing_datagroup.tcl
+```
+
+通常運用では成功サンプルだけを CI に載せ、broken sample は手動の失敗確認用として分離して使います。
+
+## よく使う実行コマンド
+
+- 通常テスト: `docker compose run --rm test`
+- 単一 Tcl テスト: `docker compose run --rm test test/<file>.tcl`
+- AS3 context 抽出: `docker compose run --rm test python3 tools/extract-as3-context.py ...`
+- AS3/iRule validation: `docker compose run --rm test python3 tools/validate-as3-irule-links.py ...`
+
+## 詳細機能
+
+### upstream TesTcl のリリース履歴
+
 - 4th May 2020 - Version [1.0.14](https://github.com/landro/TesTcl/releases) released
 - 10th November 2018 - Version [1.0.13](https://github.com/landro/TesTcl/releases) released
 - 26th September 2018 - Version [1.0.12](https://github.com/landro/TesTcl/releases) released
@@ -443,6 +554,8 @@ docker compose run --rm test python3 tools/validate-as3-irule-links.py \
 
 This sample suite is meant to demonstrate maintainable iRule test patterns, not to fully emulate
 BIG-IP runtime behavior.
+
+## 旧 TesTcl リファレンス
 
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
