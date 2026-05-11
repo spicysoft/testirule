@@ -17,6 +17,33 @@ class configure protocols {
   "ftp" "ftp://"
 }
 
+datagroup_create allowed_hosts string {
+  "example.com"
+  "api.example.com"
+}
+
+datagroup_create uri_prefixes string {
+  "/api"
+}
+
+datagroup_create allowed_host_suffixes string {
+  ".example.com"
+}
+
+datagroup_create contains_terms string {
+  "admin"
+}
+
+datagroup_create internal_networks address {
+  "10.0.0.0/8"
+  "192.168.0.0/16"
+}
+
+datagroup_map uri_to_pool_map string {
+  "/api" "api_pool"
+  "/admin" "admin_pool"
+}
+
 if { $::tcl_platform(platform) eq "java" } {
   assertStringEquals [class search -value server ends_with "r1"] "192.168.0.1"
   assertStringEquals [class search -name server ends_with "r2"] "server2"
@@ -36,4 +63,16 @@ assertStringEquals [class element -name 1 protocols] "mailto"
 assertStringEquals [class element -value 0 protocols] "http://"
 assertNumberEquals [class exists server] 1
 assertNumberEquals [class exists doesnt_exist] 0
-
+assertNumberEquals [class exists allowed_hosts] 1
+assertNumberEquals [class match "api.example.com" equals allowed_hosts] 1
+assertNumberEquals [class match "unknown.example.com" equals allowed_hosts] 0
+assertNumberEquals [class match "/api/users" starts-with uri_prefixes] 1
+assertNumberEquals [class match "/api/users" starts_with uri_prefixes] 1
+assertNumberEquals [class match "www.example.com" ends-with allowed_host_suffixes] 1
+assertNumberEquals [class match "/v1/admin/users" contains contains_terms] 1
+assertStringEquals [class lookup "/api" uri_to_pool_map] "api_pool"
+assertStringEquals [class lookup "/missing" uri_to_pool_map] ""
+assertNumberEquals [class match "10.1.2.3" equals internal_networks] 1
+assertNumberEquals [class match "172.16.1.1" eq internal_networks] 0
+assertStringEquals [class type internal_networks] "address"
+assertStringEquals [class type allowed_hosts] "string"

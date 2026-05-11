@@ -1,10 +1,14 @@
 package provide testcl 1.0.14
 package require log
 package require cmdline
+package require ip
 
 namespace eval ::testcl {
   namespace export class
+  namespace export datagroup_create
+  namespace export datagroup_map
   variable classes
+  variable class_types
 }
 
 # testcl::class --
@@ -38,6 +42,130 @@ namespace eval ::testcl {
 #
 # This format bears no resemblance to the formats used in F5
 # load balancers, and is simply the easiest to implement
+
+proc ::testcl::datagroup_set {name type entries} {
+  variable classes
+  variable class_types
+
+  set classes($name) $entries
+  set class_types($name) [string tolower $type]
+}
+
+proc ::testcl::datagroup_create {name type records} {
+  set entries {}
+  foreach record $records {
+    lappend entries $record ""
+  }
+  ::testcl::datagroup_set $name $type $entries
+}
+
+proc ::testcl::datagroup_map {name type entries} {
+  if {[expr {[llength $entries] % 2}] != 0} {
+    error "datagroup_map requires an even number of key/value elements"
+  }
+  ::testcl::datagroup_set $name $type $entries
+}
+
+proc ::testcl::class_type_of {classname} {
+  variable class_types
+
+  if {[info exists class_types($classname)]} {
+    return $class_types($classname)
+  }
+  return "string"
+}
+
+proc ::testcl::class_normalize_operator {operator} {
+  set normalized [string map {"-" "_" } [string tolower $operator]]
+  switch -- $normalized {
+    equals -
+    eq {
+      return "eq"
+    }
+    starts_with {
+      return "starts_with"
+    }
+    ends_with {
+      return "ends_with"
+    }
+    contains {
+      return "contains"
+    }
+    default {
+      return $normalized
+    }
+  }
+}
+
+proc ::testcl::class_string_matches {value operator record} {
+  switch -- [::testcl::class_normalize_operator $operator] {
+    eq {
+      return [expr {$value eq $record}]
+    }
+    starts_with {
+      return [expr {[string first $record $value] == 0}]
+    }
+    ends_with {
+      set record_length [string length $record]
+      if {$record_length == 0} {
+        return 1
+      }
+      set start_index [expr {[string length $value] - $record_length}]
+      if {$start_index < 0} {
+        return 0
+      }
+      return [expr {[string range $value $start_index end] eq $record}]
+    }
+    contains {
+      return [expr {[string first $record $value] >= 0}]
+    }
+    default {
+      error "Unsupported class operator '$operator'"
+    }
+  }
+}
+
+proc ::testcl::class_address_matches {value operator record} {
+  if {[::testcl::class_normalize_operator $operator] ne "eq"} {
+    return 0
+  }
+  set value_mask [::ip::mask $value]
+  set record_mask [::ip::mask $record]
+
+  if {$value_mask ne ""} {
+    set masked_value $value
+  } elseif {$record_mask ne ""} {
+    set masked_value "$value/$record_mask"
+  } else {
+    set masked_value $value
+  }
+
+  if {$record_mask ne ""} {
+    set masked_record $record
+  } elseif {$value_mask ne ""} {
+    set masked_record "$record/$value_mask"
+  } else {
+    set masked_record $record
+  }
+
+  if {[catch {::ip::equal $masked_value $masked_record} result]} {
+    log::log debug "Unable to compare IP '$value' against '$record': $result"
+    return 0
+  }
+  return $result
+}
+
+proc ::testcl::class_record_matches {type value operator record} {
+  switch -- [string tolower $type] {
+    address -
+    ip {
+      return [::testcl::class_address_matches $value $operator $record]
+    }
+    default {
+      return [::testcl::class_string_matches $value $operator $record]
+    }
+  }
+}
 
 proc ::testcl::class {cmd args} {
   variable classes
@@ -77,40 +205,43 @@ proc ::testcl::class {cmd args} {
   }
   
   array set params [::cmdline::getoptions args $options]
+  if {[llength $args] > 0 && [lindex $args 0] eq "--"} {
+    set args [lrange $args 1 end]
+  }
   switch -- $cmd {
     configure {
       set name [lindex $args 0]
       set value [lindex $args 1]
-      set classes($name) $value
+      ::testcl::datagroup_set $name string $value
     }
     search {
       set classname [lindex $args 0]
-      set operator [lindex $args 1]
+      set operator [::testcl::class_normalize_operator [lindex $args 1]]
       set item [lindex $args 2]
       if {[expr ! [info exists classes($classname)]]} $return_failure_block
       set clazz $classes($classname)
       for {set i 0} {$i < [llength $clazz] / 2} {incr i} {
         set element_name [lindex $clazz [expr 2 * $i]]
         set element_value [lindex $clazz [expr 2 * $i + 1]]
-        if "\$element_name $operator \$item" $return_command
+        if {[::testcl::class_string_matches $element_name $operator $item]} {
+          eval $return_command
+        }
       }
       eval $return_failure_block
     }
     match {
       set item [lindex $args 0]
-      set operator [lindex $args 1]
-      # Translate operator to standard Tcl for compatibility with Tclsh
-      # TODO implement translations for starts_with, ends_with, contains
-      if {$operator eq "equals"} {
-      	set operator "eq"
-      }
+      set operator [::testcl::class_normalize_operator [lindex $args 1]]
       set classname [lindex $args 2]
       if {[expr ! [info exists classes($classname)]]} $return_failure_block
+      set class_type [::testcl::class_type_of $classname]
       set clazz $classes($classname)
       for {set i 0} {$i < [llength $clazz] / 2} {incr i} {
         set element_name [lindex $clazz [expr 2 * $i]]
         set element_value [lindex $clazz [expr 2 * $i + 1]]
-        if "\$item $operator \$element_name" $return_command
+        if {[::testcl::class_record_matches $class_type $item $operator $element_name]} {
+          eval $return_command
+        }
       }
       eval $return_failure_block
     }
@@ -136,6 +267,13 @@ proc ::testcl::class {cmd args} {
       set classname [lindex $args 0]
       return [info exists classes($classname)]
     }
+    type {
+      set classname [lindex $args 0]
+      if {![info exists classes($classname)]} {
+        return ""
+      }
+      return [::testcl::class_type_of $classname]
+    }
     size {
       set classname [lindex $args 0]
       if {[expr ! [info exists classes($classname)]]} {
@@ -144,7 +282,6 @@ proc ::testcl::class {cmd args} {
         return [expr [llength $classes($classname)] / 2]
       }
     }
-    type -
     names -
     get -
     startsearch -

@@ -91,6 +91,57 @@ docker compose run --rm test
 Because the container entrypoint propagates the test process exit code, the GitHub Actions
 job succeeds on passing tests and fails on test errors.
 
+### Mock Data Groups
+
+TestiRule can define test Data Groups directly in Tcl and use them through `class`.
+
+Record-only groups:
+
+```tcl
+datagroup_create allowed_hosts string {
+  "example.com"
+  "api.example.com"
+}
+```
+
+Key/value groups for `class lookup`:
+
+```tcl
+datagroup_map uri_to_pool_map string {
+  "/api" "api_pool"
+  "/admin" "admin_pool"
+}
+```
+
+Address groups accept IPv4 addresses and CIDR ranges:
+
+```tcl
+datagroup_create internal_networks address {
+  "10.0.0.0/8"
+  "192.168.0.0/16"
+}
+```
+
+Supported `class` operations:
+
+- `class match <value> equals <datagroup>`
+- `class match <value> eq <datagroup>`
+- `class match <value> starts-with <datagroup>`
+- `class match <value> starts_with <datagroup>`
+- `class match <value> ends-with <datagroup>`
+- `class match <value> contains <datagroup>`
+- `class lookup <key> <datagroup>`
+- `class exists <datagroup>`
+
+Match direction is defined as follows:
+
+- `starts-with`: `<value>` starts with any Data Group record
+- `ends-with`: `<value>` ends with any Data Group record
+- `contains`: `<value>` contains any Data Group record
+
+For `address` Data Groups, this release only supports the minimum needed for `class match ... equals ...`
+with IPv4 addresses and CIDR records. Full `IP::addr` behavior remains out of scope.
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 
