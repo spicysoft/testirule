@@ -75,6 +75,22 @@ Expected exit code:
 1
 ```
 
+### Run tests with GitHub Actions
+
+Automatic tests run on GitHub Actions for:
+
+- push to `main` or `master`
+- pull requests targeting `main` or `master`
+
+The workflow builds the Docker test image and runs:
+
+```bash
+docker compose run --rm test
+```
+
+Because the container entrypoint propagates the test process exit code, the GitHub Actions
+job succeeds on passing tests and fails on test errors.
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 
