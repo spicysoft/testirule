@@ -14,6 +14,33 @@ are used when configuring [F5 BIG-IP](http://www.f5.com/products/big-ip/) device
 
 ## Getting started
 
+### Run tests with Docker
+
+You can run TesTcl/TestiRule tests without installing Tcl on your local machine.
+The Docker image includes the required runtime dependencies:
+
+- `tcl`
+- `tcllib`
+- `bash`
+
+The container entrypoint is `scripts/run-tests.sh`.
+It exports `TCLLIBPATH`, prefers the existing `test/test_*.tcl` suite, and falls back to
+`examples/test_minimal_irule.tcl` if no existing suite is present.
+
+Build and run with Docker Compose:
+
+```bash
+docker compose build
+docker compose run --rm test
+```
+
+Or build and run the image directly:
+
+```bash
+docker build -t testirule .
+docker run --rm testirule
+```
+
 If you're familiar with unit testing and [mocking](http://en.wikipedia.org/wiki/Mock_object) in particular,
 using TesTcl should't be to hard. Check out the examples below:
 

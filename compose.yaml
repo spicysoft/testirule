@@ -1,0 +1,7 @@
+services:
+  test:
+    build:
+      context: .
+    image: testirule
+    working_dir: /app
+    command: ./scripts/run-tests.sh
